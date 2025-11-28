@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roulette</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --accent-color: #ffd700;
+            --input-bg: #2a2a2a;
+            --input-border: #444;
+            --button-bg: #333;
+            --button-hover: #444;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --modal-bg: rgba(0, 0, 0, 0.85);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent-color);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            gap: 40px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .secondary-btn {
+            background-color: transparent;
+            border: 1px solid #666;
+            color: #aaa;
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        .secondary-btn:hover {
+            border-color: #888;
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+        }
+
+        .roulette-wrapper {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s;
+            /* Smooth updates if needed */
+        }
+
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid var(--accent-color);
+            z-index: 10;
+            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Center dot decoration */
+        .center-dot {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Stats List */
+        .stats-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #aaa;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+
+        .stats-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 0.95em;
+            border-bottom: 1px solid #333;
+        }
+
+        .stats-item:last-child {
+            border-bottom: none;
+        }
+
+        .win-badge {
+            background: var(--accent-color);
+            color: #000;
+            border-radius: 10px;
+            padding: 0 8px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--modal-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: #222;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+            background: none;
+            box-shadow: none;
+        }
+
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .settings-table th,
+        .settings-table td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .settings-table th {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .weight-input {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            width: 60px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .spin-btn-fair {
+            margin-top: 10px;
+            width: 100%;
+            font-size: 20px;
+            padding: 15px;
+            background-color: #2ecc71;
+            border-color: #27ae60;
+            color: #fff;
+        }
+
+        .spin-btn-fair:hover {
+            background-color: #27ae60;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+        }
+
+        @media (max-width: 850px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .roulette-wrapper {
+                width: 350px;
+                height: 350px;
+            }
+
+            canvas {
+                width: 350px;
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="controls">
+            <label for="namesInput" style="font-size: 0.9em; color: #aaa;">PARTICIPANTS (MAX 9)</label>
+            <textarea id="namesInput" placeholder="Enter names here...&#10;One per line">田中
+佐藤
+鈴木
+山本</textarea>
+            <button id="updateBtn">Update Roulette</button>
+            <button id="settingsBtn" class="secondary-btn">⚙️ Probability Settings</button>
+
+            <div class="stats-container">
+                <div class="stats-header">
+                    <span>WIN COUNTS</span>
+                    <button id="resetCountsBtn"
+                        style="background:none; border:none; color:#e74c3c; font-size:0.8em; padding:0; cursor:pointer;">RESET</button>
+                </div>
+                <ul id="statsList" class="stats-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+
+            <div style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px;">
+                <button id="fairSpinBtn" class="spin-btn-fair">SPIN!</button>
+            </div>
+        </div>
+
+        <div class="roulette-wrapper">
+            <div class="pointer"></div>
+            <canvas id="wheelCanvas" width="500" height="500"></canvas>
+            <div class="center-dot"></div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Probability Settings</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+
+            <p style="color:#aaa; font-size:0.9em; margin-bottom:15px;">Increase weight to increase winning chance.</p>
+
+            <table class="settings-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Weight</th>
+                    </tr>
+                </thead>
+                <tbody id="settingsTableBody">
+                    <!-- Rows generated by JS -->
+                </tbody>
+            </table>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="saveSettingsBtn">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const namesInput = document.getElementById('namesInput');
+        const updateBtn = document.getElementById('updateBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const fairSpinBtn = document.getElementById('fairSpinBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeModal = document.getElementById('closeModal');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const resetCountsBtn = document.getElementById('resetCountsBtn');
+        const settingsTableBody = document.getElementById('settingsTableBody');
+        const statsList = document.getElementById('statsList');
+
+        // State
+        let participants = []; // { name, weight, count }
+        let currentAngle = 0; // Degrees
+        let isSpinning = false;
+
+        // Configuration
+        const MAX_NAMES = 9;
+        const COLORS = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
+            '#D4A5A5', '#9B59B6', '#3498DB', '#E67E22'
+        ];
+
+        // Initialize
+        function init() {
+            parseNamesFromInput(); // Initial population
+            drawWheel();
+            updateStatsDisplay();
+
+            updateBtn.addEventListener('click', () => {
+                if (isSpinning) return;
+                parseNamesFromInput();
+                drawWheel();
+                updateStatsDisplay();
+            });
+
+            settingsBtn.addEventListener('click', openSettings);
+            closeModal.addEventListener('click', () => settingsModal.classList.remove('active'));
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            resetCountsBtn.addEventListener('click', resetCounts);
+            fairSpinBtn.addEventListener('click', spinFair);
+
+            document.addEventListener('keydown', handleKey);
+        }
+
+        function parseNamesFromInput() {
+            const raw = namesInput.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+            const limitedRaw = raw.slice(0, MAX_NAMES);
+
+            if (limitedRaw.length === 0) {
+                participants = [{ name: 'Empty', weight: 1, count: 0 }];
+            } else {
+                // Merge with existing data to preserve weights/counts if name exists
+                const newParticipants = limitedRaw.map(name => {
+                    const existing = participants.find(p => p.name === name);
+                    return existing ? { ...existing } : { name: name, weight: 1, count: 0 };
+                });
+                participants = newParticipants;
+            }
+        }
+
+        function getTotalWeight() {
+            return participants.reduce((sum, p) => sum + p.weight, 0);
+        }
+
+        function updateStatsDisplay() {
+            statsList.innerHTML = '';
+            participants.forEach(p => {
+                const li = document.createElement('li');
+                li.className = 'stats-item';
+                li.innerHTML = `
+                    <span>${p.name}</span>
+                    <span class="win-badge">${p.count}</span>
+                `;
+                statsList.appendChild(li);
+            });
+        }
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10; // Padding
+            const totalWeight = getTotalWeight();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(currentAngle * Math.PI / 180);
+
+            let currentSliceStart = -Math.PI / 2; // Start at top (visually)
+
+            for (let i = 0; i < participants.length; i++) {
+                const p = participants[i];
+                const sliceAngle = (p.weight / totalWeight) * (2 * Math.PI);
+                const endAngle = currentSliceStart + sliceAngle;
+
+                // Draw slice
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, currentSliceStart, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = COLORS[i % COLORS.length];
+                ctx.fill();
+                ctx.stroke();
+
+                // Draw text
+                ctx.save();
+                // Rotate to center of slice
+                const midAngle = currentSliceStart + sliceAngle / 2;
+                ctx.rotate(midAngle);
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 24px sans-serif";
+                ctx.shadowColor = "rgba(0,0,0,0.5)";
+                ctx.shadowBlur = 4;
+                ctx.fillText(p.name, radius - 30, 0);
+                ctx.restore();
+
+                currentSliceStart = endAngle;
+            }
+
+            ctx.restore();
+        }
+
+        // Settings UI Logic
+        function openSettings() {
+            settingsTableBody.innerHTML = '';
+            participants.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${p.name}</td>
+                    <td><input type="number" min="1" value="${p.weight}" class="weight-input" data-index="${index}"></td>
+                `;
+                settingsTableBody.appendChild(tr);
+            });
+            settingsModal.classList.add('active');
+        }
+
+        function saveSettings() {
+            const inputs = settingsTableBody.querySelectorAll('.weight-input');
+            inputs.forEach(input => {
+                const index = parseInt(input.dataset.index);
+                let val = parseInt(input.value);
+                if (isNaN(val) || val < 1) val = 1;
+                participants[index].weight = val;
+            });
+            settingsModal.classList.remove('active');
+            drawWheel();
+        }
+
+        function resetCounts() {
+            if (confirm('Reset all win counts?')) {
+                participants.forEach(p => p.count = 0);
+                updateStatsDisplay();
+            }
+        }
+
+        // Spin Logic
+        function handleKey(e) {
+            if (isSpinning) return;
+
+            const key = parseInt(e.key);
+            if (isNaN(key) || key < 1 || key > 9) return;
+
+            // Rigged logic
+            // Key 1 -> Index 0, Key 2 -> Index 1, etc.
+            const targetIndex = (key - 1) % participants.length;
+            spinTo(targetIndex);
+        }
+
+        function spinFair() {
+            if (isSpinning) return;
+
+            const totalWeight = getTotalWeight();
+            let random = Math.random() * totalWeight;
+            let targetIndex = -1;
+
+            for (let i = 0; i < participants.length; i++) {
+                random -= participants[i].weight;
+                if (random <= 0) {
+                    targetIndex = i;
+                    break;
+                }
+            }
+            // Fallback if rounding error
+            if (targetIndex === -1) targetIndex = participants.length - 1;
+
+            spinTo(targetIndex);
+        }
+
+        function spinTo(targetIndex) {
+            isSpinning = true;
+
+            // Normalize currentAngle to [0, 360)
+            currentAngle = currentAngle % 360;
+            if (currentAngle < 0) currentAngle += 360;
+
+            // Calculate target angle based on variable weights
+            const totalWeight = getTotalWeight();
+
+            let cumulativeWeight = 0;
+            for (let i = 0; i < targetIndex; i++) {
+                cumulativeWeight += participants[i].weight;
+            }
+
+            const targetSliceWeight = participants[targetIndex].weight;
+            const sliceAngleDeg = (targetSliceWeight / totalWeight) * 360;
+            const startAngleDeg = (cumulativeWeight / totalWeight) * 360;
+
+            // Add randomness within the slice
+            const margin = sliceAngleDeg * 0.1;
+            const randomOffset = (Math.random() - 0.5) * (sliceAngleDeg - 2 * margin);
+
+            let targetRotation = - (startAngleDeg + sliceAngleDeg / 2) + randomOffset;
+
+            // Normalize targetRotation to [0, 360)
+            let desiredEndAngle = targetRotation % 360;
+            if (desiredEndAngle < 0) desiredEndAngle += 360;
+
+            // Delta calculation
+            let delta = desiredEndAngle - currentAngle;
+            if (delta < 0) delta += 360;
+
+            // Add extra spins
+            const minSpins = 5;
+            const extraSpins = minSpins + Math.floor(Math.random() * 3);
+            const totalRotation = delta + (extraSpins * 360);
+
+            const duration = 4000;
+            const startTime = performance.now();
+            const startAngle = currentAngle;
+
+            function animate(time) {
+                const elapsed = time - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                currentAngle = startAngle + totalRotation * ease;
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    // Increment count
+                    participants[targetIndex].count++;
+                    updateStatsDisplay();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>
