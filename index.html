@@ -395,6 +395,14 @@
         </div>
     </div>
 
+    <!-- Hidden audio strategy for mobile volume button detection -->
+    <audio id="hiddenAudio" loop playsinline style="display: none;">
+        <!-- Generating a tiny silent base64 audio source -->
+        <source
+            src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+            type="audio/mp3">
+    </audio>
+
     <script>
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
@@ -408,11 +416,16 @@
         const resetCountsBtn = document.getElementById('resetCountsBtn');
         const settingsTableBody = document.getElementById('settingsTableBody');
         const statsList = document.getElementById('statsList');
+        const hiddenAudio = document.getElementById('hiddenAudio');
 
         // State
         let participants = []; // { name, weight, count }
         let currentAngle = 0; // Degrees
         let isSpinning = false;
+
+        let volumeClickCount = 0;
+        let volumeClickTimeout = null;
+        let audioInitialized = false;
 
         // Configuration
         const MAX_NAMES = 9;
@@ -441,6 +454,46 @@
             fairSpinBtn.addEventListener('click', spinFair);
 
             document.addEventListener('keydown', handleKey);
+
+            // Need user interaction to start audio context on mobile
+            document.body.addEventListener('touchstart', initAudio, { once: true });
+            document.body.addEventListener('click', initAudio, { once: true });
+
+            // Listen to volume changes
+            hiddenAudio.addEventListener('volumechange', handleVolumeChange);
+        }
+
+        // Mobile Volume Button Logic
+        function initAudio() {
+            if (audioInitialized) return;
+            hiddenAudio.play().then(() => {
+                audioInitialized = true;
+                // Force volume to 0.5 to detect both UP and DOWN safely across devices
+                hiddenAudio.volume = 0.5;
+            }).catch(e => console.log('Audio init failed (normal on strict browsers until larger interaction):', e));
+        }
+
+        function handleVolumeChange() {
+            if (isSpinning) return;
+
+            volumeClickCount++;
+
+            // Try to keep volume away from 0% or 100% so we can keep detecting changes
+            if (hiddenAudio.volume < 0.1 || hiddenAudio.volume > 0.9) {
+                hiddenAudio.volume = 0.5;
+            }
+
+            clearTimeout(volumeClickTimeout);
+
+            volumeClickTimeout = setTimeout(() => {
+                const count = volumeClickCount;
+                volumeClickCount = 0; // Reset eagerly
+
+                if (count > 0 && count <= MAX_NAMES) {
+                    const targetIndex = (count - 1) % participants.length;
+                    spinTo(targetIndex);
+                }
+            }, 1000); // Wait 1 second after last click to trigger
         }
 
         function parseNamesFromInput() {
