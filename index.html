@@ -37,6 +37,11 @@
             letter-spacing: 2px;
             text-transform: uppercase;
             color: var(--accent-color);
+            cursor: pointer;
+            /* Slightly hint it's clickable, or leave it default to be fully hidden. Let's use default to hide it */
+            user-select: none;
+            /* Prevent text selection on rapid tapping */
+            -webkit-user-select: none;
         }
 
         .container {
@@ -395,13 +400,7 @@
         </div>
     </div>
 
-    <!-- Hidden audio strategy for mobile volume button detection -->
-    <audio id="hiddenAudio" loop playsinline style="display: none;">
-        <!-- Generating a tiny silent base64 audio source -->
-        <source
-            src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
-            type="audio/mp3">
-    </audio>
+
 
     <script>
         const canvas = document.getElementById('wheelCanvas');
@@ -416,16 +415,17 @@
         const resetCountsBtn = document.getElementById('resetCountsBtn');
         const settingsTableBody = document.getElementById('settingsTableBody');
         const statsList = document.getElementById('statsList');
-        const hiddenAudio = document.getElementById('hiddenAudio');
+
+        // Find the title element for the secret tap
+        const secretTitle = document.querySelector('h1');
 
         // State
         let participants = []; // { name, weight, count }
         let currentAngle = 0; // Degrees
         let isSpinning = false;
 
-        let volumeClickCount = 0;
-        let volumeClickTimeout = null;
-        let audioInitialized = false;
+        let secretClickCount = 0;
+        let secretClickTimeout = null;
 
         // Configuration
         const MAX_NAMES = 9;
@@ -455,39 +455,26 @@
 
             document.addEventListener('keydown', handleKey);
 
-            // Need user interaction to start audio context on mobile
-            document.body.addEventListener('touchstart', initAudio, { once: true });
-            document.body.addEventListener('click', initAudio, { once: true });
-
-            // Listen to volume changes
-            hiddenAudio.addEventListener('volumechange', handleVolumeChange);
+            // Secret Tap Logic on Title
+            if (secretTitle) {
+                // Use touchstart if available to prevent delay/conflict, else click
+                secretTitle.addEventListener('touchstart', handleSecretTap, { passive: false });
+                secretTitle.addEventListener('click', handleSecretTap);
+            }
         }
 
-        // Mobile Volume Button Logic
-        function initAudio() {
-            if (audioInitialized) return;
-            hiddenAudio.play().then(() => {
-                audioInitialized = true;
-                // Force volume to 0.5 to detect both UP and DOWN safely across devices
-                hiddenAudio.volume = 0.5;
-            }).catch(e => console.log('Audio init failed (normal on strict browsers until larger interaction):', e));
-        }
+        function handleSecretTap(e) {
+            if (e.cancelable) e.preventDefault();
 
-        function handleVolumeChange() {
             if (isSpinning) return;
 
-            volumeClickCount++;
+            secretClickCount++;
 
-            // Try to keep volume away from 0% or 100% so we can keep detecting changes
-            if (hiddenAudio.volume < 0.1 || hiddenAudio.volume > 0.9) {
-                hiddenAudio.volume = 0.5;
-            }
+            clearTimeout(secretClickTimeout);
 
-            clearTimeout(volumeClickTimeout);
-
-            volumeClickTimeout = setTimeout(() => {
-                const count = volumeClickCount;
-                volumeClickCount = 0; // Reset eagerly
+            secretClickTimeout = setTimeout(() => {
+                const count = secretClickCount;
+                secretClickCount = 0; // Reset eagerly
 
                 if (count > 0 && count <= MAX_NAMES) {
                     const targetIndex = (count - 1) % participants.length;
