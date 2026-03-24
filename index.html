@@ -400,7 +400,18 @@
         </div>
     </div>
 
+    <!-- Mobile Debug Display -->
+    <div id="mobileDebug"
+        style="display:none; position:fixed; bottom:20px; left:10%; width:80%; background:rgba(0,0,0,0.85); color:#0f0; padding:15px; border-radius:10px; font-family:'Inter', sans-serif; z-index:9999; font-size:16px; text-align:center; border: 1px solid #0f0; box-sizing: border-box; pointer-events: none; line-height: 1.5; font-weight: bold;">
+        【裏機能確認用】<br>画面を1回タップして準備してください
+    </div>
 
+    <!-- Hidden audio strategy for mobile volume button detection -->
+    <audio id="hiddenAudio" loop playsinline style="display: none;">
+        <source
+            src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+            type="audio/mp3">
+    </audio>
 
     <script>
         const canvas = document.getElementById('wheelCanvas');
@@ -418,6 +429,8 @@
 
         // Find the title element for the secret tap
         const secretTitle = document.querySelector('h1');
+        const hiddenAudio = document.getElementById('hiddenAudio');
+        const mobileDebug = document.getElementById('mobileDebug');
 
         // State
         let participants = []; // { name, weight, count }
@@ -426,6 +439,7 @@
 
         let secretClickCount = 0;
         let secretClickTimeout = null;
+        let audioInitialized = false;
 
         // Configuration
         const MAX_NAMES = 9;
@@ -461,14 +475,62 @@
                 secretTitle.addEventListener('touchstart', handleSecretTap, { passive: false });
                 secretTitle.addEventListener('click', handleSecretTap);
             }
+
+            // Audio for volume buttons
+            document.body.addEventListener('touchstart', initAudio, { once: true });
+            document.body.addEventListener('click', initAudio, { once: true });
+            if (hiddenAudio) {
+                hiddenAudio.addEventListener('volumechange', handleVolumeChange);
+            }
+
+            // Show debug only on mobile
+            if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                mobileDebug.style.display = 'block';
+            }
+        }
+
+        // Mobile Audio Auth
+        function initAudio() {
+            if (audioInitialized) return;
+            if (hiddenAudio) {
+                hiddenAudio.play().then(() => {
+                    audioInitialized = true;
+                    hiddenAudio.volume = 0.5;
+                    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                        mobileDebug.innerHTML = '【準備完了】<br>タイトルタップ、または音量ボタンを<br>押してください';
+                    }
+                }).catch(e => {
+                    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                        mobileDebug.innerHTML = '【音声準備エラー】<br>画面をもう一度タップしてください';
+                    }
+                });
+            }
+        }
+
+        function handleVolumeChange() {
+            if (hiddenAudio && (hiddenAudio.volume < 0.1 || hiddenAudio.volume > 0.9)) {
+                hiddenAudio.volume = 0.5; // push it back to middle
+            }
+            triggerSecretSpin('音量ボタン');
         }
 
         function handleSecretTap(e) {
-            if (e.cancelable) e.preventDefault();
+            if (e && e.cancelable) e.preventDefault();
+            triggerSecretSpin('画面上部のタイトルをタップ');
+        }
 
+        function triggerSecretSpin(source) {
             if (isSpinning) return;
 
             secretClickCount++;
+
+            const targetIndex = (secretClickCount - 1) % participants.length;
+            const targetP = participants[targetIndex];
+            const targetName = targetP ? targetP.name : 'Unknown';
+
+            if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                mobileDebug.innerHTML = `【${source}を検知】<br>押した回数: ${secretClickCount}回<br>当てる人: <span style="color:#ffd700; font-size:1.2em;">${targetName}</span><br>(そのまま1秒待つと発動)`;
+            }
 
             clearTimeout(secretClickTimeout);
 
@@ -477,7 +539,6 @@
                 secretClickCount = 0; // Reset eagerly
 
                 if (count > 0 && count <= MAX_NAMES) {
-                    const targetIndex = (count - 1) % participants.length;
                     spinTo(targetIndex);
                 }
             }, 1000); // Wait 1 second after last click to trigger
@@ -688,6 +749,10 @@
                     // Increment count
                     participants[targetIndex].count++;
                     updateStatsDisplay();
+
+                    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                        mobileDebug.innerHTML = `【結果】<br><span style="color:#ffd700; font-size:1.2em;">${participants[targetIndex].name}</span> が当選しました!!<br><span style="color:#888; font-size:0.8em;">(操作回数はリセットされました)</span>`;
+                    }
                 }
             }
 
