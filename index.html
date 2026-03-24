@@ -402,12 +402,6 @@
         </div>
     </div>
 
-    <!-- Mobile Debug Display -->
-    <div id="mobileDebug"
-        style="display:none; position:fixed; bottom:20px; left:10%; width:80%; background:rgba(0,0,0,0.85); color:#0f0; padding:15px; border-radius:10px; font-family:'Inter', sans-serif; z-index:9999; font-size:16px; text-align:center; border: 1px solid #0f0; box-sizing: border-box; pointer-events: none; line-height: 1.5; font-weight: bold;">
-        【裏機能確認用】<br>タイトル文字をタップしてターゲットをセット
-    </div>
-
     <script>
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
@@ -424,7 +418,6 @@
 
         // Find the title element for the secret tap
         const secretTitle = document.querySelector('h1');
-        const mobileDebug = document.getElementById('mobileDebug');
 
         // State
         let participants = []; // { name, weight, count }
@@ -450,6 +443,11 @@
 
             updateBtn.addEventListener('click', () => {
                 if (isSpinning) return;
+                // Reset secret triggers on update
+                secretClickCount = 0;
+                riggedTargetIndex = -1;
+                clearTimeout(secretClickTimeout);
+
                 parseNamesFromInput();
                 drawWheel();
                 updateStatsDisplay();
@@ -470,12 +468,6 @@
                 secretTitle.addEventListener('click', handleSecretTap);
             }
 
-            // Removed audio listeners
-
-            // Show debug only on mobile
-            if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-                mobileDebug.style.display = 'block';
-            }
         }
 
         function handleSecretTap(e) {
@@ -483,14 +475,6 @@
             if (isSpinning) return;
 
             secretClickCount++;
-
-            const targetIndex = (secretClickCount - 1) % participants.length;
-            const targetP = participants[targetIndex];
-            const targetName = targetP ? targetP.name : 'Unknown';
-
-            if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-                mobileDebug.innerHTML = `【対象セット中...】<br>タップ回数: ${secretClickCount}回<br>候補: <span style="color:#ffd700; font-size:1.2em;">${targetName}</span>`;
-            }
 
             clearTimeout(secretClickTimeout);
 
@@ -500,10 +484,6 @@
 
                 if (count > 0 && count <= MAX_NAMES) {
                     riggedTargetIndex = (count - 1) % participants.length;
-                    const lockedName = participants[riggedTargetIndex].name;
-                    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-                        mobileDebug.innerHTML = `【セット完了】<br>ターゲット: <span style="color:#ffd700; font-size:1.2em;">${lockedName}</span><br>SPIN!ボタンを押すと発動します`;
-                    }
                 } else {
                     riggedTargetIndex = -1;
                 }
@@ -643,11 +623,6 @@
             if (riggedTargetIndex !== -1) {
                 const target = riggedTargetIndex;
                 riggedTargetIndex = -1; // Reset right away
-
-                if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-                    mobileDebug.innerHTML = `【発動】<br><span style="color:#ffd700; font-size:1.2em;">${participants[target].name}</span> を狙って回転中...`;
-                }
-
                 spinTo(target);
                 return;
             }
@@ -727,10 +702,6 @@
                     // Increment count
                     participants[targetIndex].count++;
                     updateStatsDisplay();
-
-                    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-                        mobileDebug.innerHTML = `【結果】<br><span style="color:#ffd700; font-size:1.2em;">${participants[targetIndex].name}</span> が当選しました!!<br><span style="color:#888; font-size:0.8em;">(操作回数はリセットされました)</span>`;
-                    }
                 }
             }
 
